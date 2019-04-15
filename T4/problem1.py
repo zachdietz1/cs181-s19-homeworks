@@ -24,15 +24,25 @@ def dist_min(cluster_1,cluster_2,norm):
 
 def dist_max(cluster_1,cluster_2,norm):
 	# Calculate the maximum distance between the two clusters.
-	return 0
+	max_dist = 0
+	for p1 in cluster_1:
+		for p2 in cluster_2:
+			n_dist = norm(p1-p2)
+			if n_dist > max_dist:
+				max_dist = n_dist
+	return max_dist
 
 def dist_centroid(cluster_1,cluster_2,norm):
 	# Calculate the centroid distance between the two clusters.
-	return 0
+	return norm(np.mean(cluster_1, axis=0)- np.mean(cluster_2, axis=0))
 
 def dist_avg(cluster_1, cluster_2,norm):
 	# Calculate the geometric average distance between the two clusters.
-	return 0
+	summation = 0
+	for p1 in cluster_1:
+		for p2 in cluster_2:
+			summation += norm(p1-p2)
+	return summation/len(cluster_1)/len(cluster_2)
 
 # Example code below does the L2 norm for min distance.
 
@@ -41,8 +51,8 @@ norms_list = [np.linalg.norm]
 norm_names = ["l2 norm"]
 
 # List of distances (this currently only has dist_min)
-dist_list = [dist_min]
-dist_names = ["min dist"]
+dist_list = [dist_min, dist_max, dist_centroid, dist_avg]
+dist_names = ["min dist ", "max dist ", "centroid dist", "avg dist "]
 
 #########################################################################
 # You should not have to change anything below this line. However, feel free
@@ -93,6 +103,4 @@ for norm_i in range(len(norms_list)):
 		print("Clusters at step" + str(step))
 		for clust in clusters:
 			print(list(clust))
-
-
-
+			

@@ -1,0 +1,454 @@
+\documentclass[submit]{harvardml}
+
+\course{CS181-S19}
+\assignment{Assignment \#1}
+\duedate{11:59pm February 8, 2019}
+
+\usepackage[OT1]{fontenc}
+\usepackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[pdftex]{graphicx}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{fullpage}
+\usepackage{soul}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color}
+\usepackage{todonotes}
+\usepackage{listings}
+\usepackage{common}
+\graphicspath{ {./images/} }
+
+\usepackage[mmddyyyy,hhmmss]{datetime}
+
+\definecolor{verbgray}{gray}{0.9}
+
+\lstnewenvironment{csv}{%
+  \lstset{backgroundcolor=\color{verbgray},
+  frame=single,
+  framerule=0pt,
+  basicstyle=\ttfamily,
+  columns=fullflexible}}{}
+ 
+
+\begin{document}
+\begin{center}
+{\Large Homework 1: Linear Regression}\\
+\end{center}
+
+
+
+\subsection*{Introduction}
+This homework is on different forms of linear regression and focuses
+on loss functions, optimizers, and regularization. Linear regression 
+will be one of the few models that we see that has an analytical solution.
+These problems focus on deriving these solutions and exploring their 
+properties. 
+
+If you find that you are having trouble with the first couple
+problems, we recommend going over the fundamentals of linear algebra
+and matrix calculus. We also encourage you to first read the Bishop
+textbook, particularly: Section 2.3 (Properties of Gaussian
+Distributions), Section 3.1 (Linear Basis Regression), and Section 3.3
+(Bayesian Linear Regression). Note that our notation is slightly different but
+the underlying mathematics remains the same.
+
+Please type your solutions after the corresponding problems using this
+\LaTeX\ template, and start each problem on a new page. You will
+submit your solution PDF, your tex file, and your code to Canvas.\\
+
+\pagebreak 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Problem 1
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{problem}[Priors as Regularization,15pts]
+
+In this problem we consider a model of Bayesian linear regression. Define the prior on the parameters as,
+\begin{align*}
+p(\btheta) = \mathcal{N}(\btheta \given \bold0, \sigma^2_\theta\ident ),
+\end{align*}
+where $\sigma^2_\theta$ is as scalar variance hyperparameter that controls the variance of the Gaussian prior.  Define the likelihood as,
+\begin{align*}
+p(\boldy \given \boldX, \btheta) &= \prod_{i=1}^n \mcN(y_i \given \btheta^\trans \boldx_i, \sigma^2_n),
+\end{align*}
+where $\sigma^2_n$ is another fixed scalar defining the variance. \\
+
+\begin{enumerate}
+\item Using the fact that the posterior is the product of the prior and the likelihood (up to a normalization constant), i.e., 
+\[\arg\max_{\btheta} \ln p(\btheta \given \boldy, \boldX)= \arg\max_{\btheta} \ln p(\btheta) + \ln p(\boldy \given \boldX, \btheta).\]
+
+\noindent Show that maximizing the log posterior is equivalent to minimizing a regularized loss function given by ${\mcL(\btheta) + \lambda \mcR(\btheta)}$, where
+\begin{align*}
+\mcL(\btheta) &= \frac{1}{2}\sum_{i = 1}^n (y_i - \btheta^\trans \boldx_i)^2 \\
+\mcR(\btheta) &= \frac{1}{2}\btheta^\trans \btheta
+\end{align*} \\
+
+Do this by writing $\ln p(\btheta \given \boldy, \boldX)$ as a function of $\mcL(\btheta)$ and $\mcR(\btheta)$, dropping constant terms if necessary.  Conclude that maximizing this posterior is equivalent to minimizing the regularized error term given by $\mcL(\btheta) + \lambda \mcR(\btheta)$ for a $\lambda$ expressed in terms of the problem's constants.  
+
+\item Notice that the form of the posterior is the same as the
+  form of the ridge regression loss
+
+\[\mcL(\btheta) = (\boldy - \boldX \btheta)^\top (\boldy - \boldX
+\btheta) + \lambda \btheta^\top \btheta .\]
+
+Compute the gradient of the loss above with respect to $\btheta$.
+Simplify as much as you can for full credit.  Make sure to give your
+answer in vector form.
+
+\item Suppose that $\lambda > 0$. Knowing that $\mcL$ is a convex function
+    of its arguments, conclude that a global optimizer of
+    $\mcL(\btheta)$ is
+    \begin{align}
+      \btheta &= (\boldX^\top \boldX + \lambda \boldI)^{-1} \boldX^\top \boldy
+    \end{align}
+
+For this part of the problem, assume that the data has been centered,
+that is, pre-processed such that $\frac{1}{n} \sum_{i=1}^n x_{ij} = 0
+$.
+
+\item What might happen if the number of weights in $\btheta$ is
+  greater than the number of data points $N$?  How does the
+  regularization help ensure that the inverse in the solution above
+  can be computed?  
+
+\end{enumerate}
+
+\end{problem}
+
+\subsection*{Solution}
+
+\begin{enumerate}
+\item We know that 
+
+$$ p(\btheta \given \boldy, \boldX)= p(\btheta) p(\boldy \given \boldX, \btheta) $$
+
+implying 
+
+\[\arg\max_{\btheta} \ln p(\btheta \given \boldy, \boldX)= \arg\max_{\btheta} \ln p(\btheta) + \ln p(\boldy \given \boldX, \btheta).\]
+
+Since $p(\btheta) = \mathcal{N}(\btheta \given \bold0, \sigma^2_\theta\ident )$, we can write
+
+$$ p(\btheta) = \frac{1}{\sqrt{\det(2\pi\sigma^2_\theta\ident)}}\exp[{-\frac{1}{2}(\btheta-\bold0)(\sigma^2_\theta\ident)^{-1}(\btheta-\bold0)^T}]$$
+
+$$ \implies p(\btheta) = \frac{1}{\sqrt{2\pi\sigma^2_\theta}}\exp[{-\frac{1}{2}\sigma^{-2}_\theta\btheta\btheta^T}]$$
+
+$$ \implies \ln p(\btheta) = \ln(\frac{1}{\sqrt{2\pi\sigma^2_\theta}}) - \frac{1}{2}\sigma^{-2}_\theta\btheta\btheta^T$$
+
+and since $p(\boldy \given \boldX, \btheta) = \prod_{i=1}^n \mcN(y_i \given \btheta^\trans \boldx_i, \sigma^2_n)$, we can write
+
+$$p(\boldy \given \boldX, \btheta) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2_n}}\exp[-\frac{1}{2}\sigma^{-2}_n(y_i-\btheta^\trans \boldx_i)^2]$$
+
+$$\implies \ln p(\boldy \given \boldX, \btheta) = \sum_{i=1}^n \ln( \frac{1}{\sqrt{2\pi\sigma^2_n}}\exp[-\frac{1}{2}\sigma^{-2}_n(y_i-\btheta^\trans \boldx_i)^2])$$
+
+$$\implies \ln p(\boldy \given \boldX, \btheta) = \sum_{i=1}^n \ln[( \frac{1}{\sqrt{2\pi\sigma^2_n}})-\frac{1}{2}\sigma^{-2}_n(y_i-\btheta^\trans \boldx_i)^2]$$
+
+$$\implies \ln p(\boldy \given \boldX, \btheta) =  n\ln( \frac{1}{\sqrt{2\pi\sigma^2_n}}) -\frac{1}{2}\sigma^{-2}_n \sum_{i=1}^n(y_i-\btheta^\trans \boldx_i)^2 $$
+
+Combining the above two expressions, we have that 
+
+$$ \ln p(\btheta \given \boldy, \boldX)=  \ln(\frac{1}{\sqrt{2\pi\sigma^2_\theta}}) - \frac{1}{2}\sigma^{-2}_\theta\btheta\btheta^T + n\ln( \frac{1}{\sqrt{2\pi\sigma^2_n}}) -\frac{1}{2}\sigma^{-2}_n \sum_{i=1}^n(y_i-\btheta^\trans \boldx_i)^2 $$
+
+Since we are interested in maximizing this quantity w.r.t $\btheta$, we can drop all constants, i.e. the terms which don't include $\btheta$ when we maximize. This gives
+
+$$ \arg\max_{\btheta} \ln p(\btheta \given \boldy, \boldX)= \arg\max_{\btheta}  [- \frac{1}{2}\sigma^{-2}_\theta\btheta\btheta^T -\frac{1}{2}\sigma^{-2}_n \sum_{i=1}^n(y_i-\btheta^\trans \boldx_i)^2 ]$$
+
+Plugging in the definitions of $\mcL(\btheta)$ and $\mcR(\btheta)$ and factoring out the negative, this becomes
+
+$$ \arg\max_{\btheta} \ln p(\btheta \given \boldy, \boldX)= \arg\max_{\btheta}  -[\sigma^{-2}_\theta\mcR(\btheta) +\sigma^{-2}_n \mcL(\btheta) ]$$
+
+Since this is a maximization problem, we can multiply through with a constant and have no effect. Hence, multiply by $\sigma^{2}_n$ and see that this becomes
+
+$$ \arg\max_{\btheta} \ln p(\btheta \given \boldy, \boldX)= \arg\max_{\btheta}  -[\frac{\sigma^{2}_n}{\sigma^{2}_\theta}\mcR(\btheta) + \mcL(\btheta) ]$$
+
+and we see that indeed maximizing the log posterior is equivalent to minimizing a regularized loss function given by ${\mcL(\btheta) + \lambda \mcR(\btheta)}$ where $\boxed{ \lambda = \dfrac{\sigma^{2}_n}{\sigma^{2}_\theta}}$ because maximizing a negative quantity is the same as minimizing the positive quantity, i.e.
+
+
+$$ \arg\max_{\btheta} \ln p(\btheta \given \boldy, \boldX)= \arg\max_{\btheta}  -[\lambda\mcR(\btheta) + \mcL(\btheta) ] = \arg\min_{\btheta}  \lambda\mcR(\btheta) + \mcL(\btheta)$$
+
+\item
+
+$$\nabla \mcL(\btheta) = \frac{d}{d\btheta}[(\boldy - \boldX \btheta)^\top (\boldy - \boldX
+\btheta) + \lambda \btheta^\top \btheta]$$
+
+$$\nabla \mcL(\btheta) = \frac{d}{d\btheta}[\boldy\boldy^\top - \btheta^\top\boldX^\top - \boldy^\top \boldX \btheta + \btheta^\top\boldX^\top \boldX \btheta] + 2\lambda \btheta = \frac{d}{d\btheta}[\boldy\boldy^\top  - 2\boldy^\top \boldX \btheta + \btheta^\top\boldX^\top \boldX \btheta] + 2\lambda \btheta$$
+
+$$\nabla \mcL(\btheta) =   - 2\boldX^\top \boldy + 2\boldX^\top\boldX \btheta + 2\lambda \btheta$$
+
+$$\boxed{\nabla \mcL(\btheta) =  2[\boldX^\top\boldX \btheta - \boldX^\top \boldy + \lambda \btheta]}$$
+
+\item Now we assume $\lambda > 0$. Since $\mcL$ is a convex function of its argument, we can find a global minimum by setting the gradient equal to $0$. We have 
+
+$$\boxed{\nabla \mcL(\btheta) = 0 = 2[\boldX^\top\boldX \btheta - \boldX^\top \boldy + \lambda \btheta]}$$
+
+$$ \implies 0 = (\boldX^\top\boldX + \lambda\ident) \btheta - \boldX^\top \boldy  $$ 
+
+$$ \boxed{\btheta =  (\boldX^\top\boldX + \lambda\ident)^{-1}\boldX^\top \boldy}  $$ 
+
+as desired.
+
+\item If the number of weights in $\btheta$ is
+  greater than the number of data points $N$, then $\boldX$ will be a narrow and wide matrix, meaning it will not be full rank. We know that $\boldX^\top\boldX$ will be positive semidefinite, but since $X$ is not full rank, $\boldX^{\top}\boldX$ will be singular, i.e. have a determinant of $0$ and be non-invertible. Hence, we would not be able to compute the traditional linear regression weights $(\btheta =  (\boldX^\top\boldX)^{-1}\boldX^\top \boldy}$. The
+  regularization helps ensure that the inverse in the solution
+  can be computed because it adds $\lambda\ident$ to $\boldX^\top\boldX$ before inverting it, ensuring that this matrix we wish to invert will have a positive determinant (since $\lambda > 0$) and will indeed be invertible.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Problem 2
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+
+\begin{problem}[Optimizing a Kernel, 15pts]
+
+Kernel-based regression techniques are similar to nearest-neighbor
+regressors: rather than fit a parametric model, they predict values
+for new data points by interpolating values from existing points in
+the training set.  In this problem, we will consider a kernel-based
+regressor of the form:
+\begin{equation*}
+  f(x^*) = \frac{ \sum_{n} K(x_n,x^*) y_n  }{ \sum_{n} K(x_n,x^*) } 
+\end{equation*}
+where $(x_n,y_n)$ are the training data points, and $K(x,x')$ is a
+kernel function that defines the similarity between two inputs $x$ and
+$x'$.  A popular choice of kernel is a function that decays with
+the distance between the two points, such as
+\begin{equation*}
+  K(x,x') = \exp(-||x-x'||^2_2) = \exp(-(x-x') (x-x')^T ) 
+\end{equation*} 
+However, the squared Euclidean distance $||x-x'||^2_2$ may not always
+be the right choice.  In this problem, we will consider optimizing
+over squared Mahalanobis distances
+\begin{equation*}
+  K(x,x') = \exp(-(x-x') W (x-x')^T ) 
+  \label{eqn:distance}
+\end{equation*} 
+where $W$ is a symmetric $D$ by $D$ matrix.  Intuitively, introducing
+the weight matrix $W$ allows for different dimensions to matter
+differently when defining similarity.
+
+\begin{enumerate}
+
+\item Let $\{(x_n,y_n)\}_{n=1}^N$ be our training data set.  Suppose
+  we are interested in minimizing the squared loss.  Write down the
+  loss over the training data $\mcL(W)$ as a function of $W$.  
+
+\item In the following, let us assume that $D = 2$.  That means that
+  $W$ has three parameters: $W_{11}$, $W_{22}$, and $W_{12} = W_{21}$.
+  Expand the formula for the loss function to be a function of these
+  three parameters.
+
+\item Derive the gradients with respect to each of the parameters in
+  $W$.
+
+\item Consider the following data set:
+\begin{csv}
+x1 , x2 , y 
+  0 , 0 , 0
+  0 , .5 , 0
+  0 , 1 , 0 
+  .5 , 0 , .5
+  .5 , .5 , .5
+  .5 , 1 , .5
+  1 , 0 , 1
+  1 , .5 , 1
+  1 , 1 , 1 
+\end{csv}
+And the following kernels:
+\begin{equation*} 
+W_1 = \alpha \begin{bmatrix}
+  1 & 0 \\
+  0 & 1 
+\end{bmatrix}
+\qquad
+W_2 = \alpha \begin{bmatrix}
+  0.1 & 0 \\
+  0 & 1 
+\end{bmatrix}
+\qquad
+W_3 = \alpha \begin{bmatrix}
+  1 & 0 \\
+  0 & 0.1 
+\end{bmatrix}
+\end{equation*} 
+with $\alpha = 10$. Write some code to compute the loss with respect
+to each kernel.  Which does best?  Why?  Does the choice of $\alpha$
+matter? 
+
+
+\item \textbf{Bonus, ungraded.}  Code up a gradient descent to
+  optimize the kernel for the data set above.  Start your gradient
+  descent from $W_1$.  Report on what you find.
+  
+\end{enumerate}
+
+\end{problem}
+
+\subsection*{Solution}
+
+\begin{enumerate}
+    \item $$\mcL(W) = \frac{1}{2}\sum_{i}(f(x_i)-y_i)^2 = \frac{1}{2}\sum_{i}(\frac{\sum_{j\neq i} \exp(-(x_j-x_i) W (x_j-x_i)^T )y_j}{\sum_{j\neq i} \exp(-(x_j-x_i) W (x_j-x_i)^T )} -y_i)^2$$
+    
+    This is the loss over the training data $\mcL(W)$ as a function of $W$.
+
+    \item For notational convenience, let $d = x_j - x_i$ and $d_a$ refers to the $a$'th component of the $d$ vector. Hence, the loss function is
+    
+    $$\mcL(W) = \frac{1}{2}\sum_{i}(\frac{\sum_{j\neq i} \exp(-d W d^T )y_j}{\sum_{j\neq i} \exp(-d W d^T )} -y_i)^2$$
+    
+    Expanding $W$, we have
+    
+    $$\mcL(W) = \frac{1}{2}\sum_{i}(\frac{\sum_{j\neq i} \exp(-d [W_{11}d_1 + W_{12}d_2, W_{12}d_1 + W_{22}d_2]^T )y_j}{\sum_{j\neq i} \exp(-d W_{12}d_2, W_{12}d_1 + W_{22}d_2]^T )} -y_i)^2$$
+    
+    $$\mcL(W) = \frac{1}{2}\sum_{i}(\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j}{\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )} -y_i)^2$$
+    
+    \item By the chain rule, we have that
+    $$\frac{\partial \mcL(W)}{\partial W_{z}} = $$
+    
+    $$\underbrace{\frac{\partial }{\partial W_{z}} [\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j} {\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}]}_{\text{I will call this }\dfrac{\partial} {\partial W_{z}}}\sum_{i}(\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j}{\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )} -y_i)
+    $$
+    where $z$ can equal $11, 12$ or $22$. Therefore, for brevity, I will find $\dfrac{\partial}{\partial W_{z}}$ for $z = [11, 12, 22]$ and  the gradient of the loss function with respect to $W_{11}, W_{12}$, and $W_{22}$ can be found by plugging these in to the above expression. We have
+    \begin{enumerate}
+        \item[$z = 11$:] 
+        $$\frac{\partial }{\partial W_{11}} [\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j} {\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}]$$
+        
+        \begin{equation}
+        \resizebox{.8\hsize}{!}{$=-\frac{\sum_{j\neq i} d_1^2\exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j}{\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}$} 
+        \end{equation}
+        
+\resizebox{.8\hsize}{!}{$+\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j\sum_{j\neq i} d_1^2\exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2))}{[\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2)]^2}$}
+\end{equation}
+        
+        \item[$z = 12$:]
+        $$\frac{\partial }{\partial W_{12}} [\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j} {\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}]$$
+        
+        \begin{equation}
+        \resizebox{.8\hsize}{!}{$=-\frac{\sum_{j\neq i} 2d_1d_2\exp( (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j}{\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}$} 
+        \end{equation}
+      
+      \begin{equation}  
+    \resizebox{.8\hsize}{!}{$+\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j\sum_{j\neq i} 2d_1d_2\exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2))}{[\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2)]^2}$}
+    \end{equation}
+        \item[$z = 22$:]
+        $$\frac{\partial }{\partial W_{22}} [\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j} {\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}]$$
+        
+        \begin{equation}
+        \resizebox{.8\hsize}{!}{$=-\frac{\sum_{j\neq i} d_2^2\exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j}{\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )}$} 
+        \end{equation}
+      
+      \begin{equation}  
+    \resizebox{.8\hsize}{!}{$+\frac{\sum_{j\neq i} \exp(- (W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2) )y_j\sum_{j\neq i} d_2^2\exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2))}{[\sum_{j\neq i} \exp(-(W_{11}d_1^2 + 2W_{12}d_1d_2 + W_{22}d_2^2)]^2}$}
+    \end{equation}
+    \end{enumerate}
+    
+    \item The squared errors of $W_1$, $W_2$ and $W_3$ and $0.338$, $2.23$ and $0.025$, respectively. Hence, it appears that $W_3$ performs best. This is because $x_1$ in the data maps exactly to $y$. $W_3$ multiplies $x_1$ by the largest coefficient while multiplying $x_2$ by the smallest coefficient. So, it effectively focuses all on $x_1$ and nearly ignores $x_2$. Hence, it is most accurate because $x_2$ turns out to be irrelevant for predicting $y.$
+    
+    In general, a larger $\alpha$ will cause the regression to fit the specific data points more accurately but the regression will become less general.
+\end{enumerate}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Problem 3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+
+\begin{problem}[Modeling Changes in Republicans and Sunspots, 15pts]
+  
+ The objective of this problem is to learn about linear regression
+ with basis functions by modeling the number of Republicans in the
+ Senate. The file \verb|data/year-sunspots-republicans.csv| contains the
+ data you will use for this problem.  It has three columns.  The first
+ one is an integer that indicates the year.  The second is the number
+ of sunspots.  The third is the number of Republicans in the Senate.
+ The data file looks like this:
+ \begin{csv}
+Year,Sunspot_Count,Republican_Count
+1960,112.3,36
+1962,37.6,34
+1964,10.2,32
+1966,47.0,36
+\end{csv}
+and you can see plots of the data in the figures below.  The horizontal axis is the year, and the vertical axis is the number of Republicans and the number of sunspots, respectively.
+
+\begin{center}
+\includegraphics[width=.7\textwidth]{data/year-republicans}
+\end{center}
+
+\begin{center}
+\includegraphics[width=.7\textwidth]{data/year-sunspots}
+\end{center}
+
+(Data Source: \url{http://www.realclimate.org/data/senators_sunspots.txt})\\
+
+\begin{enumerate}
+
+\item Implement basis function regression with ordinary least squares for
+years vs. number of Republicans in the Senate. Some sample Python code
+is provided in \verb|linreg.py|, which implements linear regression.
+Plot the data and regression lines for the simple linear case, and for
+each of the following sets of basis functions (use basis (b) only for Republicans v. Years, skip for Sunspots v. Republicans):
+\begin{enumerate}
+	\item[(a)] $\phi_j(x) = x^j$ for $j=1, \ldots, 5$ 
+    \item[(b)] $\phi_j(x) = \exp{\frac{-(x-\mu_j)^2}{25}}$ for $\mu_j=1960, 1965, 1970, 1975, \ldots 2010$
+	\item[(c)] $\phi_j(x) = \cos(x / j)$ for $j=1, \ldots, 5$
+	\item[(d)] $\phi_j(x) = \cos(x / j)$ for $j=1, \ldots, 25$
+\end{enumerate}
+
+\item In addition to the plots, provide one or two sentences for each with
+numerical support, explaining whether you think it is fitting well,
+overfitting or underfitting.  If it does not fit well, provide a
+sentence explaining why. A good fit should capture the most important
+trends in the data.
+
+\item Next, do the same for the number of sunspots vs. number of
+Republicans, using data only from before 1985.  What bases provide the
+best fit?  Given the quality of the fit, would you believe that the
+number of sunspots controls the number of Republicans in the senate?
+
+\end{enumerate}
+
+\end{problem}
+
+\subsection*{Solution}
+\begin{enumerate}
+    \item[1 and 2.] 
+    \begin{enumerate}
+        \item[(a)] \hspace\break\includegraphics[scale= 0.6]{1a.png}
+        \\Squared Error $= 424.87$. This function appears to underfit the data as supported by the high squared error. The data does not seem to be distributed according to a degree 5 polynomial function, so this is likely why. However, it does seem to capture the general trend of the data, so it could be a good fit depending on your purpose.
+        \item[(b)] \hspace\break\includegraphics[scale= 0.6]{1b.png}
+        \\Squared Error $= 54.27$. This function appears to overfit the data as demonstrated by the very low squared error. This makes sense since there are so many bases (almost the same as the number of data points) so the weights can be crafted very finely to fit the data.
+        \item[(c)] \hspace\break\includegraphics[scale= 0.6]{1c.png}
+        \\Squared Error $= 1082.81$. This function, like (a), appears to underfit the data as supported by the very high squared error. This makes sense because we are only using 5 bases, so many features of the data are lost by projecting it to this low dimensional space.
+        \item[(d)] \hspace\break\includegraphics[scale= 0.6]{1d.png}
+        \\Squared Error $= 39.00$. This function, like (b), appears to overfit the data as demonstrated by the very low squared error. Again, we are using many bases (about the same as the number of data points) so the weights can be crafted very finely to fit the data.
+    \end{enumerate}
+    \item[3.]
+    \begin{enumerate}
+        \item[(a)] \hspace\break\includegraphics[scale= 0.6]{3a.png} 
+        \\Squared Error $= 351.23$. Much like (a) in part 1 where we fit a degree 5 polynomial to Republicans vs. years, this function appears to again underfit the data. Again, it has a high squared error. However, it does seem to capture the general trend of the data (somewhat), so it could be a good fit depending on your purpose.
+        \item[(c)] \hspace\break\includegraphics[scale= 0.6]{3c.png} 
+        \\Squared Error $= 375.11$. The function appears to underfit based on the high squared error. It does not seem to have a lot of predictive capabilities.
+        \item[(d)] \hspace\break\includegraphics[scale= 0.6]{3d.png}
+        \\Squared Error $= 2.51\times10^{-22}$. This function appears to overfit the data as demonstrated by the extremely small (practically 0) squared error. There are much more bases than the number of data points, so this could be why.
+        
+        The best fit seems to belong to the degree 5 polynomial in (a). However, it only captures the general trend. But more importantly, even though this general trend is captured, I do not believe the number of sunspots dictates the number of republicans in Congress. This seems to be an issue of correlation vs. causation. They are not the same!
+    \end{enumerate}
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Problem 4
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\begin{problem}[Administrative]
+\leavevmode
+\begin{itemize}
+    \item Name: Zach Dietz
+    \item Email: zachdietz1@gmail.com
+    \item Collaborators: Theo Walker, Kaishu Mason
+    \item Approximately how long did this homework take you to complete (in hours):   8
+\end{itemize}
+\end{problem}
+
+
+\end{document}

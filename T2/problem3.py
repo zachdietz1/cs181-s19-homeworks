@@ -14,8 +14,8 @@ from GaussianGenerativeModel import GaussianGenerativeModel
 # adjust these as you try to find the best fit for each classifier.
 
 # Logistic Regression parameters
-eta = 0.1
-lambda_parameter = 0.1
+eta = 0.05
+lambda_parameter = .0
 
 # Whether or not you want the plots to be displayed
 show_charts = True
@@ -78,6 +78,7 @@ X = df[['Magnitude', 'Temperature']].values
 y = np.array([star_labels[x] for x in df['Type']])
 
 # Setting up and evaluating a number of different classification models
+
 nb1 = GaussianGenerativeModel(is_shared_covariance=False)
 nb1.fit(X, y)
 visualize_boundary(nb1, X, y, 'generative_result_separate_covariances')
@@ -90,6 +91,7 @@ visualize_boundary(nb2, X, y, 'generative_result_shared_covariances')
 print('Shared Covariance negative log-likelihood: {}\n'
       .format(nb2.negative_log_likelihood(X, y)))
 
+'''
 lr = LogisticRegression(eta=eta, lambda_parameter=lambda_parameter)
 lr.fit(X, y)
 lr.visualize_loss('logistic_regression_loss', show_charts=show_charts)
@@ -102,6 +104,7 @@ y_nb2 = nb2.predict(X_test)
 y_lr = lr.predict(X_test)
 
 # Predicting an unseen example
+
 print('Test star type predictions for Separate Covariance Gaussian Model:')
 print('magnitude 6 and temperature 2: {}\n'.format(y_nb1[0]))
 
@@ -110,3 +113,4 @@ print('magnitude 6 and temperature 2: {}\n'.format(y_nb2[0]))
 
 print('Test star type predictions for Linear Regression:')
 print('magnitude 6 and temperature 2: {}'.format(y_lr[0]))
+'''
